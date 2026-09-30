@@ -1,153 +1,129 @@
-/* ===== 数据定义 ===== */
-const IDENTITIES = [
-  {
-    id: 'med', icon: '🩺', name: '医学生',
-    desc: '模拟接诊，做出诊断',
-    dims: ['专业知识', '沟通能力', '应急判断', '同理心', '抗压能力'],
-    scenes: [
-      '患者，男，58岁，突发胸痛2小时入院，伴大汗、恶心。既往高血压10年。',
-      '家属情绪激动，质疑为什么还没开始治疗，要求立刻做手术。',
-      '检查结果显示急性下壁心肌梗死，但患者同时有消化道出血史。'
-    ],
-    questions: [
-      '你会首先安排哪些检查？初步诊断是什么？',
-      '面对焦虑的家属，你如何沟通病情与风险？',
-      '出血史与抗凝治疗冲突，你会如何权衡并制定方案？'
-    ]
-  },
-  {
-    id: 'mech', icon: '⚙️', name: '机械生',
-    desc: '毕业入职，被甲方反复改图',
-    dims: ['制图能力', '软件熟练度', '沟通谈判', '时间管理', '抗压能力'],
-    scenes: [
-      '入职第三周，甲方发来第一版修改意见："整体感觉不够大气，再调调。"',
-      '第二次修改：甲方换了个对接人，推翻了之前的所有确认。',
-      '第三次修改：明天就要交付，甲方晚上11点发来27条新意见。'
-    ],
-    questions: [
-      '面对模糊的"再调调"，你会如何拆解需求并推进？',
-      '对接人变更导致返工，你怎么和甲方以及领导沟通？',
-      '交付前夜突发大量修改，你的应对策略是什么？'
-    ]
-  },
-  {
-    id: 'fin', icon: '📈', name: '金融工作者',
-    desc: '被风控总监连环拷问',
-    dims: ['数据分析', '风险意识', '逻辑表达', '合规意识', '抗压能力'],
-    scenes: [
-      '风控总监把你叫进办公室："这个项目的预期收益率凭什么比同业高200BP？"',
-      '"你模型里假设的违约率，数据来源是哪？回测区间覆盖过周期吗？"',
-      '"如果下季度利率上行50BP，你这个组合的回撤会到多少？给我压力测试。"'
-    ],
-    questions: [
-      '你如何向总监解释收益差异的合理性？',
-      '面对数据来源质疑，你如何自证模型的可靠性？',
-      '请简述你的压力测试思路与关键假设。'
-    ]
-  }
-];
+/* ===== 全局 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-const ADMIN = { username: 'admin', password: 'admin123' };
-
-/* ===== 工具函数 ===== */
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-const showPage = (id) => { $$('.page').forEach(p => p.classList.remove('active')); $(`#page-${id}`).classList.add('active'); };
-const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
-
-function getUsers() { return JSON.parse(localStorage.getItem('sim_users') || '[]'); }
-function saveUsers(u) { localStorage.setItem('sim_users', JSON.stringify(u)); }
-function getRecords() { return JSON.parse(localStorage.getItem('sim_records') || '[]'); }
-function saveRecords(r) { localStorage.setItem('sim_records', JSON.stringify(r)); }
-function currentUser() { return JSON.parse(sessionStorage.getItem('sim_user') || 'null'); }
-function setCurrentUser(u) { sessionStorage.setItem('sim_user', JSON.stringify(u)); }
-
-/* ===== 状态 ===== */
-let quizState = { identity: null, answers: [], current: 0 };
-let chartInstance = null;
-
-/* ===== 页面1：注册 / 登录 ===== */
-$$('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    $('#form-login').classList.toggle('hidden', tab !== 'login');
-    $('#form-register').classList.toggle('hidden', tab !== 'register');
-  });
-});
-
-$('#form-register').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const username = $('#reg-username').value.trim();
-  const password = $('#reg-password').value;
-  const realname = $('#reg-realname').value.trim();
-  if (!username || !password) return;
-  const users = getUsers();
-  if (users.find(u => u.username === username)) { alert('用户名已存在'); return; }
-  users.push({ username, password, realname: realname || username, createdAt: Date.now() });
-  saveUsers(users);
-  alert('注册成功，请登录');
-  $('.tab-btn[data-tab="login"]').click();
-});
-
-$('#form-login').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const username = $('#login-username').value.trim();
-  const password = $('#login-password').value;
-  const users = getUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user && !(username === ADMIN.username && password === ADMIN.password)) {
-    alert('用户名或密码错误'); return;
-  }
-  const u = user || { username: ADMIN.username, realname: '管理员' };
-  setCurrentUser(u);
-  goHome();
-});
-
-/* ===== 页面3：主页 ===== */
-function goHome() {
-  const u = currentUser();
-  if (!u) { showPage('auth'); return; }
-  $('#user-avatar').textContent = u.realname[0].toUpperCase();
-  $('#user-name').textContent = u.realname;
-  $('#user-greeting').textContent = `欢迎回来，${u.realname}`;
-
-  // 身份卡片
-  const grid = $('#identity-grid');
-  grid.innerHTML = '';
-  IDENTITIES.forEach(id => {
-    const card = document.createElement('div');
-    card.className = 'identity-card';
-    card.innerHTML = `<div class="icon">${id.icon}</div><div class="name">${id.name}</div><div class="desc">${id.desc}</div>`;
-    card.addEventListener('click', () => startQuiz(id));
-    grid.appendChild(card);
-  });
-
-  // 占位入口
-  const more = document.createElement('div');
-  more.className = 'identity-card';
-  more.innerHTML = `<div class="icon">➕</div><div class="name">更多身份</div><div class="desc">敬请期待</div>`;
-  grid.appendChild(more);
-
-  // 答题记录
-  renderRecords();
-
-  // 管理员面板
-  if (u.username === ADMIN.username) {
-    $('#admin-panel').classList.remove('hidden');
-    const users = getUsers();
-    const records = getRecords();
-    $('#admin-user-count').textContent = users.length;
-    $('#admin-record-count').textContent = records.length;
-    renderAdminTable(records);
-  } else {
-    $('#admin-panel').classList.add('hidden');
-  }
-
-  showPage('home');
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  color: #e0e0e0;
 }
 
-function renderRecords() {
-  const u = currentUser();
-  const
+/* ===== 页面切换 ===== */
+.page { display: none; min-height: 100vh; padding: 24px 16px; animation: fadeIn .4s ease; }
+.page.active { display: flex; justify-content: center; align-items: flex-start; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes typing { from { width: 0; } to { width: 100%; } }
+
+.hidden { display: none !important; }
+
+/* ===== 卡片 ===== */
+.auth-card, .quiz-card, .result-card, .home-card {
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 520px;
+  animation: slideUp .5s ease;
+}
+
+h1 { font-size: 1.6rem; margin-bottom: 4px; }
+h2 { font-size: 1.3rem; margin-bottom: 16px; }
+h3 { font-size: 1.05rem; margin: 20px 0 10px; }
+.subtitle { color: #aaa; font-size: .85rem; margin-bottom: 20px; }
+
+/* ===== 表单 ===== */
+.tab-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab-btn {
+  flex: 1; padding: 8px; border: none; border-radius: 8px;
+  background: rgba(255,255,255,.06); color: #ccc; cursor: pointer;
+}
+.tab-btn.active { background: #6c5ce7; color: #fff; }
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+input, textarea {
+  width: 100%; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06);
+  color: #fff; font-size: .95rem; outline: none;
+}
+input:focus, textarea:focus { border-color: #6c5ce7; }
+.hint { font-size: .75rem; color: #888; margin-top: 12px; }
+
+/* ===== 按钮 ===== */
+.btn-primary, .btn-secondary, .btn-danger {
+  padding: 10px 20px; border: none; border-radius: 10px;
+  font-size: .95rem; cursor: pointer; transition: .2s;
+}
+.btn-primary { background: #6c5ce7; color: #fff; }
+.btn-primary:hover { background: #5a4bd1; }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-secondary { background: rgba(255,255,255,.1); color: #ddd; }
+.btn-danger { background: #d63031; color: #fff; margin-top: 12px; }
+
+/* ===== 场景动画 ===== */
+.scene-box {
+  background: rgba(0,0,0,.25); border-left: 3px solid #6c5ce7;
+  border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+  min-height: 60px; font-size: .92rem; line-height: 1.6;
+  animation: slideUp .4s ease;
+}
+
+.question-text { font-size: .95rem; margin-bottom: 8px; color: #c8bfff; }
+
+/* ===== 答题进度 ===== */
+.quiz-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: .85rem; color: #aaa; }
+.quiz-footer { display: flex; gap: 10px; margin-top: 16px; }
+.quiz-footer button { flex: 1; }
+
+/* ===== 结果页 ===== */
+.result-identity { font-size: 1.1rem; margin-bottom: 12px; }
+.chart-wrap { max-width: 360px; margin: 0 auto 16px; }
+.result-eval { font-size: .9rem; line-height: 1.7; margin-bottom: 10px; }
+.result-score { font-size: 1.5rem; font-weight: bold; color: #6c5ce7; margin-bottom: 16px; }
+
+/* ===== 主页 ===== */
+.user-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #6c5ce7; display: flex; align-items: center;
+  justify-content: center; font-weight: bold; font-size: 1.1rem;
+}
+.user-name { font-weight: bold; }
+.user-greeting { font-size: .8rem; color: #aaa; }
+
+.identity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.identity-card {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 16px 12px; text-align: center;
+  cursor: pointer; transition: .2s;
+}
+.identity-card:hover { background: rgba(108,92,231,.2); border-color: #6c5ce7; transform: translateY(-3px); }
+.identity-card .icon { font-size: 1.6rem; margin-bottom: 6px; }
+.identity-card .name { font-size: .9rem; }
+.identity-card .desc { font-size: .7rem; color: #999; margin-top: 4px; }
+
+.record-list { max-height: 260px; overflow-y: auto; }
+.record-item {
+  background: rgba(255,255,255,.04); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 8px; font-size: .82rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.record-item .ri-left { flex: 1; }
+.record-item .ri-score { font-weight: bold; color: #6c5ce7; }
+.empty-hint { color: #666; font-size: .85rem; }
+
+/* ===== 管理员 ===== */
+.admin-panel { margin-top: 24px; border-top: 1px solid rgba(255,255,255,.1); padding-top: 16px; }
+.admin-table-wrap { max-height: 200px; overflow-y: auto; margin-top: 8px; font-size: .78rem; }
+.admin-table-wrap table { width: 100%; border-collapse: collapse; }
+.admin-table-wrap th, .admin-table-wrap td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 480px) {
+  .auth-card, .quiz-card, .result-card, .home-card { padding: 20px 16px; }
+  .identity-grid { grid-template-columns: repeat(2, 1fr); }
+}

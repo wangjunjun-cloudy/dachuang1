@@ -1,153 +1,233 @@
-/* ===== 数据定义 ===== */
+/* ===== 基础工具 ===== */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const ADMIN = { username: 'admin', password: 'admin123' };
+
+/* ===== 身份与题目数据 ===== */
 const IDENTITIES = [
   {
-    id: 'med', icon: '🩺', name: '医学生',
-    desc: '模拟接诊，做出诊断',
-    dims: ['专业知识', '沟通能力', '应急判断', '同理心', '抗压能力'],
+    id: 'med',
+    icon: '🩺',
+    name: '医学生',
+    desc: '模拟临床、急诊场景',
+    dims: ['专业知识', '沟通能力', '应急能力', '同理心', '抗压能力'],
     scenes: [
-      '患者，男，58岁，突发胸痛2小时入院，伴大汗、恶心。既往高血压10年。',
-      '家属情绪激动，质疑为什么还没开始治疗，要求立刻做手术。',
-      '检查结果显示急性下壁心肌梗死，但患者同时有消化道出血史。'
+      { title: '场景一', text: '患者 58 岁，突发胸痛入院……' },
+      { title: '场景二', text: '家属情绪激动，质疑治疗方案……' }
     ],
     questions: [
-      '你会首先安排哪些检查？初步诊断是什么？',
-      '面对焦虑的家属，你如何沟通病情与风险？',
-      '出血史与抗凝治疗冲突，你会如何权衡并制定方案？'
+      { q: '你首先应该做什么？', options: ['A. 立即心电监护', 'B. 先询问病史', 'C. 通知家属', 'D. 安排检查'] },
+      { q: '如何向患者解释风险？', options: ['A. 如实完整告知', 'B. 简化说明', 'C. 由家属决定', 'D. 暂不说明'] }
     ]
   },
   {
-    id: 'mech', icon: '⚙️', name: '机械生',
-    desc: '毕业入职，被甲方反复改图',
-    dims: ['制图能力', '软件熟练度', '沟通谈判', '时间管理', '抗压能力'],
+    id: 'mech',
+    icon: '⚙️',
+    name: '机械生',
+    desc: '产线调试、项目协作',
+    dims: ['制图能力', '软件操作', '沟通协作', '时间管理', '抗压能力'],
     scenes: [
-      '入职第三周，甲方发来第一版修改意见："整体感觉不够大气，再调调。"',
-      '第二次修改：甲方换了个对接人，推翻了之前的所有确认。',
-      '第三次修改：明天就要交付，甲方晚上11点发来27条新意见。'
+      { title: '场景一', text: '甲方发来新需求，需调整原有结构……' },
+      { title: '场景二', text: '加工件出现公差超差……' }
     ],
     questions: [
-      '面对模糊的"再调调"，你会如何拆解需求并推进？',
-      '对接人变更导致返工，你怎么和甲方以及领导沟通？',
-      '交付前夜突发大量修改，你的应对策略是什么？'
+      { q: '你会如何评估需求变更？', options: ['A. 直接改图', 'B. 先评估影响再确认', 'C. 拒绝变更', 'D. 交给上级'] },
+      { q: '公差超差如何排查？', options: ['A. 查加工参数', 'B. 查图纸标注', 'C. 查量具校准', 'D. 以上都要'] }
     ]
   },
   {
-    id: 'fin', icon: '📈', name: '金融工作者',
-    desc: '被风控总监连环拷问',
-    dims: ['数据分析', '风险意识', '逻辑表达', '合规意识', '抗压能力'],
+    id: 'fin',
+    icon: '💼',
+    name: '金融工作者',
+    desc: '客户沟通、风险控制',
+    dims: ['专业知识', '沟通表达', '风险意识', '合规意识', '抗压能力'],
     scenes: [
-      '风控总监把你叫进办公室："这个项目的预期收益率凭什么比同业高200BP？"',
-      '"你模型里假设的违约率，数据来源是哪？回测区间覆盖过周期吗？"',
-      '"如果下季度利率上行50BP，你这个组合的回撤会到多少？给我压力测试。"'
+      { title: '场景一', text: '客户希望提高收益但风险偏好较低……' },
+      { title: '场景二', text: '发现一笔交易存在合规疑点……' }
     ],
     questions: [
-      '你如何向总监解释收益差异的合理性？',
-      '面对数据来源质疑，你如何自证模型的可靠性？',
-      '请简述你的压力测试思路与关键假设。'
+      { q: '如何匹配产品与风险偏好？', options: ['A. 推荐高收益产品', 'B. 做风险测评后匹配', 'C. 由客户自选', 'D. 拒绝服务'] },
+      { q: '发现合规疑点应如何处理？', options: ['A. 自行修正', 'B. 立即上报', 'C. 先观察', 'D. 忽略'] }
     ]
   }
 ];
 
-const ADMIN = { username: 'admin', password: 'admin123' };
+/* ===== 本地存储 ===== */
+function getUsers() {
+  return JSON.parse(localStorage.getItem('users') || '[]');
+}
+function saveUsers(list) {
+  localStorage.setItem('users', JSON.stringify(list));
+}
+function getRecords() {
+  return JSON.parse(localStorage.getItem('records') || '[]');
+}
+function saveRecords(list) {
+  localStorage.setItem('records', JSON.stringify(list));
+}
+function currentUser() {
+  return JSON.parse(localStorage.getItem('currentUser') || 'null');
+}
 
-/* ===== 工具函数 ===== */
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-const showPage = (id) => { $$('.page').forEach(p => p.classList.remove('active')); $(`#page-${id}`).classList.add('active'); };
-const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
-
-function getUsers() { return JSON.parse(localStorage.getItem('sim_users') || '[]'); }
-function saveUsers(u) { localStorage.setItem('sim_users', JSON.stringify(u)); }
-function getRecords() { return JSON.parse(localStorage.getItem('sim_records') || '[]'); }
-function saveRecords(r) { localStorage.setItem('sim_records', JSON.stringify(r)); }
-function currentUser() { return JSON.parse(sessionStorage.getItem('sim_user') || 'null'); }
-function setCurrentUser(u) { sessionStorage.setItem('sim_user', JSON.stringify(u)); }
-
-/* ===== 状态 ===== */
-let quizState = { identity: null, answers: [], current: 0 };
-let chartInstance = null;
-
-/* ===== 页面1：注册 / 登录 ===== */
-$$('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    $('#form-login').classList.toggle('hidden', tab !== 'login');
-    $('#form-register').classList.toggle('hidden', tab !== 'register');
-  });
-});
-
-$('#form-register').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const username = $('#reg-username').value.trim();
-  const password = $('#reg-password').value;
-  const realname = $('#reg-realname').value.trim();
-  if (!username || !password) return;
+/* 初始化默认管理员 */
+(function initAdmin() {
   const users = getUsers();
-  if (users.find(u => u.username === username)) { alert('用户名已存在'); return; }
-  users.push({ username, password, realname: realname || username, createdAt: Date.now() });
-  saveUsers(users);
-  alert('注册成功，请登录');
-  $('.tab-btn[data-tab="login"]').click();
-});
-
-$('#form-login').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const username = $('#login-username').value.trim();
-  const password = $('#login-password').value;
-  const users = getUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user && !(username === ADMIN.username && password === ADMIN.password)) {
-    alert('用户名或密码错误'); return;
+  if (!users.some(u => u.username === ADMIN.username)) {
+    users.push({ username: ADMIN.username, password: ADMIN.password, role: 'admin' });
+    saveUsers(users);
   }
-  const u = user || { username: ADMIN.username, realname: '管理员' };
-  setCurrentUser(u);
-  goHome();
-});
+})();
 
-/* ===== 页面3：主页 ===== */
-function goHome() {
-  const u = currentUser();
-  if (!u) { showPage('auth'); return; }
-  $('#user-avatar').textContent = u.realname[0].toUpperCase();
-  $('#user-name').textContent = u.realname;
-  $('#user-greeting').textContent = `欢迎回来，${u.realname}`;
+/* ===== 页面切换 ===== */
+function showPage(name) {
+  $$('.page').forEach(p => p.classList.toggle('active', p.id === name));
+}
 
-  // 身份卡片
-  const grid = $('#identity-grid');
-  grid.innerHTML = '';
-  IDENTITIES.forEach(id => {
-    const card = document.createElement('div');
-    card.className = 'identity-card';
-    card.innerHTML = `<div class="icon">${id.icon}</div><div class="name">${id.name}</div><div class="desc">${id.desc}</div>`;
-    card.addEventListener('click', () => startQuiz(id));
-    grid.appendChild(card);
+/* ===== 登录 / 注册 ===== */
+function bindAuth() {
+  $('#login-btn')?.addEventListener('click', () => {
+    const username = $('#login-username').value.trim();
+    const password = $('#login-password').value.trim();
+    if (!username || !password) {
+      alert('请填写用户名和密码');
+      return;
+    }
+    const u = getUsers().find(x => x.username === username && x.password === password);
+    if (!u) {
+      alert('用户名或密码错误');
+      return;
+    }
+    localStorage.setItem('currentUser', JSON.stringify(u));
+    afterLogin(u);
   });
 
-  // 占位入口
-  const more = document.createElement('div');
-  more.className = 'identity-card';
-  more.innerHTML = `<div class="icon">➕</div><div class="name">更多身份</div><div class="desc">敬请期待</div>`;
-  grid.appendChild(more);
+  $('#register-btn')?.addEventListener('click', () => {
+    const username = $('#reg-username').value.trim();
+    const password = $('#reg-password').value.trim();
+    if (!username || !password) {
+      alert('请填写完整信息');
+      return;
+    }
+    const users = getUsers();
+    if (users.some(u => u.username === username)) {
+      alert('该用户名已存在');
+      return;
+    }
+    users.push({ username, password, role: 'user' });
+    saveUsers(users);
+    alert('注册成功，请登录');
+  });
+}
 
-  // 答题记录
-  renderRecords();
-
-  // 管理员面板
+function afterLogin(u) {
   if (u.username === ADMIN.username) {
-    $('#admin-panel').classList.remove('hidden');
+    $('#admin-panel')?.classList.remove('hidden');
     const users = getUsers();
     const records = getRecords();
     $('#admin-user-count').textContent = users.length;
     $('#admin-record-count').textContent = records.length;
     renderAdminTable(records);
   } else {
-    $('#admin-panel').classList.add('hidden');
+    $('#admin-panel')?.classList.add('hidden');
   }
-
   showPage('home');
 }
 
+/* ===== 身份选择 ===== */
+function renderIdentities() {
+  const grid = $('#identity-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  IDENTITIES.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'identity-card';
+    card.innerHTML = `<div class="icon">${item.icon}</div><div class="name">${item.name}</div><div class="desc">${item.desc}</div>`;
+    card.addEventListener('click', () => startQuiz(item.id));
+    grid.appendChild(card);
+  });
+}
+
+/* ===== 答题与评分 ===== */
+let currentIdentity = null;
+let currentIndex = 0;
+
+function startQuiz(id) {
+  currentIdentity = IDENTITIES.find(i => i.id === id);
+  currentIndex = 0;
+  if (!currentIdentity) return;
+  showPage('quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = currentIdentity.questions[currentIndex];
+  if (!q) return;
+  $('#quiz-title').textContent = `${currentIdentity.name} · 第 ${currentIndex + 1} / ${currentIdentity.questions.length} 题`;
+  $('#quiz-question').textContent = q.q;
+  const box = $('#quiz-options');
+  box.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="radio" name="answer" value="${i}"> ${opt}`;
+    box.appendChild(label);
+  });
+}
+
+function nextQuestion() {
+  const picked = document.querySelector('input[name="answer"]:checked');
+  if (!picked) {
+    alert('请先选择一个选项');
+    return;
+  }
+  currentIndex++;
+  if (currentIndex < currentIdentity.questions.length) {
+    renderQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+
+function finishQuiz() {
+  const u = currentUser();
+  const score = Math.round(Math.random() * 30 + 70); // 示例评分，可替换为真实计分逻辑
+  const records = getRecords();
+  records.push({
+    username: u ? u.username : '匿名',
+    identity: currentIdentity.name,
+    score,
+    time: new Date().toLocaleString()
+  });
+  saveRecords(records);
+  $('#result-score').textContent = score;
+  $('#result-identity').textContent = currentIdentity.name;
+  showPage('result');
+}
+
+/* ===== 答题记录 ===== */
 function renderRecords() {
   const u = currentUser();
-  const
+  const list = getRecords().filter(r => u && r.username === u.username);
+  const box = $('#record-list');
+  if (!box) return;
+  box.innerHTML = list.length
+    ? list.map(r => `<div class="record-item"><span class="ri-left">${r.identity}</span><span class="ri-right">${r.score} 分 · ${r.time}</span></div>`).join('')
+    : '<div class="empty-hint">暂无答题记录</div>';
+}
+
+/* ===== 管理员面板 ===== */
+function renderAdminTable(records) {
+  const tbody = $('#admin-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = records.length
+    ? records.map(r => `<tr><td>${r.username}</td><td>${r.identity}</td><td>${r.score}</td><td>${r.time}</td></tr>`).join('')
+    : '<tr><td colspan="4">暂无记录</td></tr>';
+}
+
+/* ===== 入口 ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  bindAuth();
+  renderIdentities();
+  renderRecords();
+  showPage('login');
+});

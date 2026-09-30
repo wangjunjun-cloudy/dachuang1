@@ -81,7 +81,7 @@ function currentUser() {
 
 /* ===== 页面切换 ===== */
 function showPage(name) {
-  $$('.page').forEach(p => p.classList.toggle('active', p.id === name));
+$$('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
 }
 
 /* ===== 登录 / 注册 ===== */
@@ -229,5 +229,5 @@ document.addEventListener('DOMContentLoaded', () => {
   bindAuth();
   renderIdentities();
   renderRecords();
-  showPage('login');
+  showPage('auth');
 });
